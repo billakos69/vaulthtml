@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Θυρίδα Οικογένειας</title>
+<style>
+  :root{
+    --bg:#0A0C0F;
+    --panel:#14171C;
+    --panel-2:#191D23;
+    --border:#262B33;
+    --text:#E8E6E0;
+    --muted:#8A8F98;
+    --brass:#C9A15A;
+    --brass-dim:#8C7239;
+    --danger:#C97569;
+    --success:#6FA083;
+    --serif: Georgia, 'Times New Roman', ui-serif, serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    --mono: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background: radial-gradient(ellipse 900px 600px at 50% -10%, #1a1e25 0%, var(--bg) 55%);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .stage{ width:100%; max-width:460px; position:relative; }
+
+  /* ---------- LOGIN ---------- */
+  #login-card{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:44px 36px 36px;
+    text-align:center;
+    box-shadow:0 30px 60px -25px rgba(0,0,0,.6);
+    transition:opacity .5s ease, transform .5s ease, filter .5s ease;
+  }
+  #login-card.hiding{ opacity:0; transform:scale(.96); filter:blur(4px); pointer-events:none; }
+
+  .dial-wrap{ display:flex; justify-content:center; margin-bottom:22px; }
+  .dial{ width:132px; height:132px; }
+  .dial-ring{ transform-origin:66px 66px; }
+  @media (prefers-reduced-motion: no-preference){
+    .dial-ring{ animation:spin 90s linear infinite; }
+    .dial.unlocking .dial-ring{ animation:spinFast 1.1s cubic-bezier(.2,.7,.3,1) forwards; }
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @keyframes spinFast{ to{ transform:rotate(1080deg); } }
+  .dial.shake{ animation:shake .4s ease; }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-6px); }
+    40%{ transform:translateX(5px); }
+    60%{ transform:translateX(-4px); }
+    80%{ transform:translateX(3px); }
+  }
+
+  h1{ font-family:var(--serif); font-weight:400; font-size:23px; letter-spacing:.3px; margin:0 0 6px; }
+  .sub{ color:var(--muted); font-size:13.5px; margin:0 0 26px; }
+
+  #code-input{
+    width:100%;
+    background:#0D0F13;
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:20px;
+    letter-spacing:4px;
+    text-align:center;
+    border-radius:10px;
+    padding:14px 12px;
+    outline:none;
+    transition:border-color .2s ease;
+  }
+  #code-input::placeholder{ color:#4E545F; letter-spacing:1px; font-family:var(--sans); font-size:13px; }
+  #code-input:focus{ border-color:var(--brass-dim); }
+
+  #unlock-btn{
+    margin-top:16px;
+    width:100%;
+    background:var(--brass);
+    color:#1A1305;
+    border:none;
+    border-radius:10px;
+    padding:13px;
+    font-size:14.5px;
+    font-weight:600;
+    letter-spacing:.2px;
+    cursor:pointer;
+    transition:background .2s ease, transform .1s ease;
+  }
+  #unlock-btn:hover{ background:#d6ac63; }
+  #unlock-btn:active{ transform:translateY(1px); }
+  #unlock-btn:disabled{ opacity:.55; cursor:default; }
+
+  #error-msg{
+    min-height:20px;
+    color:var(--danger);
+    font-size:13px;
+    margin-top:14px;
+  }
+
+  .footnote{ margin-top:22px; color:#565C66; font-size:11.5px; line-height:1.5; }
+
+  /* ---------- VAULT ---------- */
+  #vault-view{
+    display:none;
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:30px 28px 26px;
+    box-shadow:0 30px 60px -25px rgba(0,0,0,.6);
+    opacity:0;
+    transform:translateY(8px);
+    transition:opacity .5s ease .15s, transform .5s ease .15s;
+  }
+  #vault-view.showing{ display:block; }
+  #vault-view.in{ opacity:1; transform:translateY(0); }
+
+  .vault-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+  .vault-header h2{ font-family:var(--serif); font-weight:400; font-size:19px; margin:0; }
+  #lock-btn{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--muted);
+    font-size:12.5px;
+    padding:7px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:border-color .2s ease, color .2s ease;
+  }
+  #lock-btn:hover{ border-color:var(--brass-dim); color:var(--text); }
+
+  .section{ margin-bottom:22px; }
+  .section:last-child{ margin-bottom:0; }
+  .section-label{
+    font-size:11px; letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:10px;
+  }
+
+  .field-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:#0D0F13; border:1px solid var(--border); border-radius:10px;
+    padding:11px 13px; margin-bottom:8px;
+  }
+  .field-row .k{ font-size:12px; color:var(--muted); min-width:64px; }
+  .field-row .v{ font-family:var(--mono); font-size:14.5px; letter-spacing:.3px; word-break:break-all; text-align:right; flex:1; }
+  .copy-btn{
+    flex-shrink:0;
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+    font-size:11px; padding:5px 9px; border-radius:7px; cursor:pointer;
+    transition:border-color .2s ease, color .2s ease;
+  }
+  .copy-btn:hover{ border-color:var(--brass-dim); color:var(--brass); }
+  .copy-btn.copied{ color:var(--success); border-color:var(--success); }
+
+  .file-item{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:#0D0F13; border:1px solid var(--border); border-radius:10px;
+    padding:11px 13px; margin-bottom:8px;
+  }
+  .file-item .name{ font-size:13.5px; }
+  .file-item a{
+    flex-shrink:0; color:#1A1305; background:var(--brass); text-decoration:none;
+    font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:7px;
+  }
+  .file-item a:hover{ background:#d6ac63; }
+
+  .empty-hint{ color:#565C66; font-size:12.5px; padding:4px 2px; }
+
+  .notes-box{
+    background:#0D0F13; border:1px solid var(--border); border-radius:10px;
+    padding:13px; font-size:13.5px; line-height:1.6; color:#C7C4BC; white-space:pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div id="login-card">
+    <div class="dial-wrap">
+      <svg class="dial" id="dial" viewBox="0 0 132 132">
+        <circle cx="66" cy="66" r="58" fill="none" stroke="#262B33" stroke-width="1.5"/>
+        <g class="dial-ring" id="dial-ring" stroke="#3A4049" stroke-width="1.5">
+          <!-- tick marks -->
+          <g id="ticks"></g>
+        </g>
+        <circle cx="66" cy="66" r="40" fill="#0D0F13" stroke="#262B33" stroke-width="1"/>
+        <path d="M66 30 L70 40 L62 40 Z" fill="#C9A15A"/>
+      </svg>
+    </div>
+    <h1>Θυρίδα Οικογένειας</h1>
+    <p class="sub">Πληκτρολογήστε τον προσωπικό σας κωδικό</p>
+    <input id="code-input" type="password" inputmode="text" placeholder="Κωδικός" autocomplete="off" autofocus>
+    <button id="unlock-btn">Άνοιγμα</button>
+    <div id="error-msg"></div>
+    <p class="footnote">Κάθε κωδικός ανοίγει μόνο τη δική του θυρίδα. Τα δεδομένα αποκρυπτογραφούνται τοπικά, στη συσκευή σας.</p>
+  </div>
+
+  <div id="vault-view">
+    <div class="vault-header">
+      <h2>Η θυρίδα σας</h2>
+      <button id="lock-btn">Κλείδωμα</button>
+    </div>
+
+    <div class="section" id="fields-section">
+      <div class="section-label">Στοιχεία</div>
+      <div id="fields-list"></div>
+    </div>
+
+    <div class="section" id="files-section">
+      <div class="section-label">Αρχεία</div>
+      <div id="files-list"></div>
+    </div>
+
+    <div class="section" id="notes-section" style="display:none;">
+      <div class="section-label">Σημειώσεις</div>
+      <div class="notes-box" id="notes-box"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================= DATA (replaced by the admin tool on export) ================= */
+const VAULT_ENTRIES = /*__ENTRIES__*/[{"salt":"Li/6ZPHl+lsAG7Qx8DwVeA==","iv":"0WCsb2SMuk8cxXzf","ct":"HH7szaYnWmtfxa/mghdupmPgf1Ziy2PcUX5HbwostPSJUhGgEbDmbQ+kC3/7StnL6xM4qVkdH+BfUVtUncUk9/bp62bgQUQ58wTm6CHpn94pg9yqp6JSQeUxL/MF7c4AEBiIUsDZnGd1tbbf0Z/u0ruYgmHIrsQKhb9Qvizf+Fc629Mb1g9FPzUBCd/tRykFR0c91MqKmwma7z9QYgbVoaa7u4IflbqjjwVewFPVfKCLzuFTT7s3RBU2tEkT2N7Mi+UIr6TOp6nBtsh+5nYEkGczE9KtNeVh9MQUldK8mHxTcEMyVWtOz6LYEMUP23TVEmu4z3aQ/btFYRPG2KTF6l7kaqN0g08z/S3YRNzvsNHy6pmx73Glg9AX0SFqWsO86+LegdGErjZr2sNHomG4h52V2CPrLzoDQXeR9Y0VfBxk/GYreHjiP0OSt+9W7gcw1WcPxJ3l2uXelEZytimLabSYBAQHSaqnWXATsfA+Iz95CXzQm1HYyhStxXQNmLA0YMTL/0Kk7aFf/k7PJrYu23DZ6xaCKVjOVEcjDxN+su0nyEhNr+xp+I0SIXaDpZj83tXEhjDg/lF7Ogp5b4MApwADJkiGozo9QJBCzVmvlOZETzAqsaYINvtN0tRMghHzFxoPrcLA0LbC4HzUxEtITegii460FMaw6tNTX3lJE7RT64iU6nudry4GwyYCAAmrdUGG/0OEKn5dObs7Ym+1L7akb6POmo1W1gUxxzmrr+u8VdtRc7qp9VtOB0auTQei9qzjjy0C5UmOQb/xY7Q2K85TstjdEMfoz9P6aKZnwRICqpfKVt1InYN1czPi7E3j5++kZRLTnH1EdRbSMVvZ9834X6fpSfx9nOXl0VZnb+2uFBrvxxO/I/b8hHILGpbmcAwhrwaoCjEOq04r7qx/7g+l/vg9CbPbrM58+11DYzPWRzVvU/GgA6S4Bhvn8KMfgmrpCMooZyN0QfujLTP3r3QXRZt44hQhRIu5k6PA4IpDI36zri0pzuA5OOqxPl79+dPYEuE2EKGnc8DAb+Q7SmNNauC+p3QHiSHFjdRWp+tyELK2KSZHm4yk+8Bi1dMJJJGe4iHQ0oFFozuwyAw4sLYllxDczYDQgGxGVgCZg0xYPD4zhyRYgVFYSdylnI7MeEZKUDf411Mw6/x+JKYdc9rT8NgF32uGiRiJt/pNtWe/tHdj8Q2iCw7FfzfK3lYJV6/g53OFI0N1LSPU1Eu2tEiR9vktsZpIyS6eMpEYnA8WUXXznhvTRV1GI16asGQ61/BgTpIiLkojWnXWJJfvxnkefps6tk1sWp0FIzl/32nPkcxBrvJRdEnm9Y8="},{"salt":"3xa/B69md1GzRL3cC1vXWQ==","iv":"t5Px3REc/N4GZ8CZ","ct":"oE0XW20oj9VLnRe4n5Y4c/Atr+tSmp9DyR3iAUIGM6NdMdEbxLZ7MRiT/7opqjqcomhTCHLH5Ysh0Ehp5hagWsMrtpSrPqVFdbQoZI3sJvYeG1PtCRG5sf3OLvRoqlFalM3u5wZ3REyoudTbnEp/PVbMZn3Qkx2YQpb/DRKLCFH/MfB9+piCESIaR4V8WTBivTRk4QJpadOF1GmS5JxztmVBf6MJfaUikXM7uPtuQ1u9USz2iOc5B3EFW15K4Tnlz42yXCMpMFATGwUfODVzusM45BPnjGAHYLHsdvtFG7SHa/CEOLfH8/G2mL9DUCR9zaRknx6LAUqES6gbMZQZxBLdu2AqNMksnF331AWLUN3gO3wDkcKM1fR/qGyZe+PkkgDbD/zbRxp62s/O4b3vrse6fQRpyfIkx3ChEx7qZM4VDtapdXEqRq9WOFhmYVM8BQBJk6zTzwRcedKEht5oMosnaUEkmUE87sA1KqsjWVC+nXtPrdRZSw/6EY911mZpETGVeG74Eb1URvZymb5LAqkKY7ZxIKHtpd53bz7bC9VCL+mOwYvGO5S+1u55x3ch2vtZs8dkrS1qcdnGZC0yqMQvtFpVMjj7lhzq8aJ5O1Y+JdfBMHCaZoisOXS2OuSXv8DMpsbKKJX5pOiED7oug/pj6JKZRF6UAAXG5e0GtBYXb/4xb96IbecuwQuQ5nQGSOsiXi1wMpHGJ6oBHWRglvTiIFWvNuBFySBx4Jlz1WW0ZOR74IQn2KgGKDuwVutWJ1hwNUaWqG3w5IpPlMAKqMpd381qw/8fNyFvXF7T9xHjws3Yu3ahUgdYNZ2eV9CdUsOBZEIO+MqeYKjZgCEH/ibYmKelDpxzJCAUgLeA7HH1LBo7Zsee0XldM1DYuHVyaIAislCM/j0V/t50gEFmWdk/Vryp287UD70F6Gv6IVLpDw=="},{"salt":"iWa6J2XQZwh15IeST/J+uQ==","iv":"3fMGYBP62Nrx3cZG","ct":"vsMxlKFtwJIRNIEdvwwcirA1m20kgFB2Eb6jgr3O2281rRK0aLl0lRYLrtDlS5kxKkfferZCQT8+B72Ubogxx4ugkTvcByAs7VYUd5Ypv8wgST79Vlha0v+Xmj7z0tJN17fHsI+YOft6N3NM6KSGYOS6Cb1446yhjCzI8cBs2kpLhD4s3Uj0XqsIVJpAXLP/xBxkPlKRwu86tY8vE2WpzXcLw5ySyyr76/duLwEE+IEywdT0HgXrgYeQ3aie5HZ8fePdN16/c6kHAUfW/6cSWAaE0sQN5/CJiFFKExQwayrJzL/bx74AIzyUkCfIA/Sl1Mj5JkVnC2Ir0KGqvI0OmDuOd7/5C5UHYlF5AfV/l3xCbLmLZetrMqLIm37R8ZeJbssM87dksBqE1WZGZzhOfa2T7yIlJ8Wo+oBTT4zhlHvmAjkV5YjNdFO1gtZJfJ4QAAxro4sexuyAML27bWr1M6tq3UuoXjJ6kjNb6ixQ45y4bULnypvtMBBu7Z++WqL48cqwTEKU+NerK4+y41RKc2mlmtpTPEAFqkWs+vc2F67ag30oUdrsQ1EFbIbwefK9HHXTBhYufdiOp4qmhwRKp7o/8yEl0XTQDdNerOyrZKUP6FHE456OZlUUrwJy4dqbuHooYtG8TsY54+wux0oWgx8Jap/o9EVlxJ1MBtpGI01eZEp70U6Wdpa1Dn4JaKzuqiqkrfhNqBuu05YsWDJeIA9+a6BdBxukt3wyhkONTjb0sazwIBA5hWcTT9cx84ezltMB0O5l83lEgSnHMjlv2rf40drNAl1+152k4PbO61XnLRT5Q+5TSBW6xTkWigGwm3PhgyNs6UIVbb7U1BBXVkcug5CdWRDCiWpRSVrj+NBRJSGGib4w8zCnS/+Y+yjOYkSAq8paRVlQc4Zo+TTMCWd61kXbx2Syh78mmmanP6wznt3OJmZnttZpY2vLhBbuQp1tHzD+nQQ2fmGS4+eGpg3mPLJH70kGJOYMzz+yn4fK4MY4sNrIwk/+wdVUg5yE8bLHjxiT3nYs+PhmciX1CA+jlgdvDBgtBv53QAuj9iU6G8O40t8qXu9SQSZn3DMeViXVCfZUKWJaqvFqXphft8HLiR6tlwIFbfGjAsvthriPkU6UkMztJ+5ukhqLp/c7k20lp90fZBL9rKLQw5Rdeh5qyhY2yItdRI6u6D2X5MvcJz/0rnT033ZCl1FWAHDeet/Tw6lUnUnXnv0gzFlj17GXmWnlP4KQqqxXyZV7pe3OHi9Td2v/9rkxiReZ+KND5v7bDXsuI6uVKq/WUOxXtNBpGAUOpet/RTA8XgzMUfpPhvxGLM+oKwoxZQrlsvuFh7l/RG4cRzNUSmkI3bML/FgNY9cHySM0q7zM9IvQCdxHFKGE4PApFYX/ia6nEb5Ry7RtvK80lZaomBrXvpr58MrcP9zaKP9Dy/oiROPR6XNuM7hNqhLZNEhGkkJTFOhAPhJUugZClGcvjV6JmcggHlBrVj+A3aiO8zwpExinbS7egeoJi1mX3dzPafIUZEmDK+IhvXdhGRM2hxldaJVQAYllfcaeFQwEU0p3VCulc+J3A6sQ4L+/DuYeG1e4gkdLYr1i9DvUtFA+vlOC91JlAYMRtlwrCTX3Bu73snhpxS7/J1F1N1FEgUPsx6+gmOWXNf3HFfiJrbwi8vuWFQvPXhR/cJtaz6Cin3RzjxxyuYP29lWFQ622HoMYByiPDoouE8/d5AHx14okZAYSp0lKJGf/qY/3Lz0TcMCoTnSYkxVxijg08bgs/e78nhvDJYmD2qGISROTEeMImbhJZUao6Ww8cUsG3JCogZci0dueHkei1MPMtfIYm81qsSXWkvClncuYajPZLIT/ZA=="},{"salt":"q8wvMifFN1YJU9BW24bCVg==","iv":"Fdg7ET2IHawsxtd0","ct":"wJdaPpQJQJug7E4IhvPyTNV6PanPXJlhv/rCPhcA03uk3T0ZwcCN/sVntlPidfArpmTw9Pz1iO+p0pQvrJcML9EhQ2oMUJNoH5jKOHHkwi2Owci9taVtRGofqAKJiPCyvmpmiC/5ThVNrbCWzPAASjw2K5VWx5GJPGb6sSRQkrut7bA6rMTmx0r8HGW5to3AJgwSPJ9JQS/Vp96rrQAgf6IV4zcxGoaKZJPq5E5HvPG2GGUSS2gOq3a/PZ32YTnSlbYT7BYh7cuI1kCuUGXxwm9C2wzvrZoJVAKjBnIbFPJVws80IlJduO7xiYAwjCmcFkK1D5oFKWZwt3hl0AEYK85x61f2cly2ri0zFSoVoLQ00HuB52bY4We33y7MV8rEQOg4kbkxaV8l82pkSCzbmoPVpZrBDHQ1n9L7fGhiKcHp+W9ACbCV6/nUklQRFcuz/a4BAGh4cUscST1kLmoyjSQmLxzTF9jchXMOt/yX0Z73rkqKwk1auSLUZI4GmB95KG3kJIIypTjWpSejk22rRkSZdrkGeIveMU97+64/9piOBZGnvDglA4nhci3WCb2xDWUUcGcmKT2K+exXti+9W2K03QHp609PD9HrSbbkJHd0ybpDdAflRNPAbH7IP6ns3O3qQDOXruXEaRPO3eByaGJFeIvf4xMEYZHt/E+g/G752yJGok9E"},{"salt":"4dGetc2r4G+jRLQfgremeg==","iv":"2V4fzL9wbrbWhTjs","ct":"5ypd5Q806qYKRsnH7GJ7LDY+4dNY3JXhoniYV8AOvDXa7I3yZdPd+NsQFB+NtFULjJBaNFfElLxGHbsWIowQQCVOZGine11kicgwHMoNzz6AE4plY1SfafxO+n0dEb++6GdUeHsrWzERjV+VtQGrBqwGpWf5K3YfJSIzkYI9CvVQMYjtRoDIFAdl47ULoLpiFS/8hbrz/MJQxRRcztBnA8BLZsUw9m2sLtTn90Oj5Hk31yW14pJhqE1lhp7Ib+dr6SDIJrxlrgf320bpb0y4KD9JwOtgdAH94RtGGIarJhhyxm4Xd0bP/c7NXuG1qNg/I7CQST7ppC0M8DQbMmFI/fIOolw3/k+uE7oQ1oF0+NPqgSPfl5NIQ1/92seRcy6cgBtWzXZd3gYbr9LKoaJzWVQQxLUpR5P90DGBtonZuuMFKtN0yUZuuZ8NUarI53C//Bv1NRU52WHKDAPPa1UbAhjbYJWwggulbl2kXzN9awx85L2sW8XD1Z38TwFOHB50ATAFaq3eKWPzADfoRDXLtP9nZgvnITKrwm5AoOTxzzefIkjVNJzaXSFbvDvm/k7xclVuhhbibqzvLdi27RKb4tN+DfS2dRaPavz4txATMHlCeghHtW9NgOwDY2ZQNq+sF0n1lW3/RJJQ7WOFDxeJi77iQDT4tHGD5bkhbqY81FwWLDSKCwcMH15pYtvJ+KMNXXZ/R2Ds3jRctsFxN7dYzvpJdPwb4VinPcfIXUFr7UczkORConuESrzqz55YQLqzgf0VeH7+AWkh5bbW5PEHS69hLc/OzX2Bfw/rUbCbbYszYzXuMFR8APLqLd/9bMAGubBVwKaS9FIkasD5xp8iE91OZREAYYkHMO3kDmXi2yM8vpIzqKILVcZFPkLbv/r4E1p4RvWq7MJg8p+3x9+eb7XMVOY5YmgU2SK/w+n4Zk4CQWgFdKI3oreLAwlCd+LcdvVNsW/SGdhBN0djwaG5MobHfbRCv5KA4BJiEjXC+OU5nWi6ARYSSxVt8QGFIoTrPEUpLLjERrGhMdCbl9Ai94RnbrFrDoHxBgoI9iVfrU4XQRpBXUaPh8oRmvOmyvtD0o9Sfra5u9nvbP+wW0m1F4gQqpvVyRMkspVFWp2jpgmRDC90yGwglYzefBYk4yr5"},{"salt":"exsQhFBoeTU/dnirJ6WvJg==","iv":"Z+c+1/y+n9fI69Rk","ct":"sA9KvQGGjp7K1YBsHI8riMn/kaB8XNoVxiQ9/CXjRj6hIRiBMo8LARGRRwGSoB1ipIVOr+X2Pe0mZH/QtlItZ3FFkFVKwr6+nNiplEtGdWh7us7m5w1G3Tb8t22QM07mae67l7THiUNvtR8qasDm9xAtkgU4XSmlPIayerKAqyg/QXPXG+TQ300TGwrpRQde2AJ3oomU/KfV0F043R9pdamPsDT0EcAGGMoCu6THGjqD0RWXYf2yfbfbcA66CC1zQB4v0OCYbdE8R2bAeLt1+IwddtcaKdaixn7AdPWMPSgVugts6MzRBIZxhvykY7uCXK45ZxpYldkTRbyoR2ODIum0SxwTFsWdp1MhLGy9Hua16ukQRPttLXbHFe38KIosaQfHOzd6Yq/YaXtKL7X5XXcr81YDD2xdFeGTCzGWtI/NyeBatERG3lpTcnoCsN8kMEpWUL/1mRPa3hpfapyRGqDKvvhsFO5smUPdaROQ4Y1HR1EOpRXPfNwJh1MlYO1yk7FvQJlYQulinOVOtDLOcTFSh8nd3IllGpIz44h4qWzeTZLZWwdv8Hzg4rXEW/sZONLSKo+XhRosV70UyHYEik82CBZK62JgDuBCzbQuxlOhR52YVpWr43/LdjTXLSVfLOK/PZo/n74xoBhSo5AFTsTIYFT5jxKMPwgBp9VeK0OzbOIGC2U+J/klTc8byqjpSyWW4IgGaK3r4qct5ECvmyj8+uxP3Eu64lOl6pwJhjC4AHcSf6dWaJO+XLtA5hifrBVe8LoZXc6lC4+qmRH64MHvhn6zTHDV95TVq005"}];
+/* ================================================================================ */
+
+const PBKDF2_ITERATIONS = 250000;
+
+// ---- draw dial ticks ----
+(function drawTicks(){
+  const g = document.getElementById('ticks');
+  const cx = 66, cy = 66, r1 = 50, r2 = 56;
+  for(let i=0;i<40;i++){
+    const a = (i/40) * Math.PI * 2;
+    const x1 = cx + r1*Math.sin(a), y1 = cy - r1*Math.cos(a);
+    const x2 = cx + r2*Math.sin(a), y2 = cy - r2*Math.cos(a);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    g.appendChild(line);
+  }
+})();
+
+// ---- base64 helpers ----
+function b64ToBytes(b64){
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+async function deriveKey(code, saltB64){
+  const enc = new TextEncoder();
+  const salt = b64ToBytes(saltB64);
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt, iterations:PBKDF2_ITERATIONS, hash:'SHA-256' },
+    baseKey,
+    { name:'AES-GCM', length:256 },
+    false,
+    ['decrypt']
+  );
+}
+
+async function tryDecrypt(entry, code){
+  try{
+    const key = await deriveKey(code, entry.salt);
+    const iv = b64ToBytes(entry.iv);
+    const ct = b64ToBytes(entry.ct);
+    const plainBuf = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+    const json = new TextDecoder().decode(plainBuf);
+    return JSON.parse(json);
+  }catch(e){
+    return null;
+  }
+}
+
+// ---- UI wiring ----
+const loginCard = document.getElementById('login-card');
+const vaultView = document.getElementById('vault-view');
+const codeInput = document.getElementById('code-input');
+const unlockBtn = document.getElementById('unlock-btn');
+const errorMsg = document.getElementById('error-msg');
+const dial = document.getElementById('dial');
+
+let attempts = 0;
+
+async function attemptUnlock(){
+  const code = codeInput.value;
+  if(!code){ return; }
+  unlockBtn.disabled = true;
+  errorMsg.textContent = '';
+
+  let matched = null;
+  for(const entry of VAULT_ENTRIES){
+    const data = await tryDecrypt(entry, code);
+    if(data){ matched = data; break; }
+  }
+
+  if(matched){
+    dial.classList.add('unlocking');
+    setTimeout(()=>{
+      loginCard.classList.add('hiding');
+      renderVault(matched);
+      vaultView.classList.add('showing');
+      requestAnimationFrame(()=> vaultView.classList.add('in'));
+    }, 350);
+  }else{
+    attempts++;
+    dial.classList.remove('shake'); void dial.offsetWidth; dial.classList.add('shake');
+    errorMsg.textContent = 'Λάθος κωδικός. Δοκιμάστε ξανά.';
+    codeInput.value = '';
+    codeInput.focus();
+    const delay = Math.min(attempts * 400, 3000);
+    await new Promise(r => setTimeout(r, delay));
+    unlockBtn.disabled = false;
+  }
+}
+
+unlockBtn.addEventListener('click', attemptUnlock);
+codeInput.addEventListener('keydown', e => { if(e.key === 'Enter') attemptUnlock(); });
+
+document.getElementById('lock-btn').addEventListener('click', ()=>{
+  window.location.reload();
+});
+
+function copyToClipboard(text, btn){
+  navigator.clipboard.writeText(text).then(()=>{
+    const original = btn.textContent;
+    btn.textContent = 'Αντιγράφηκε';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent = original; btn.classList.remove('copied'); }, 1400);
+  });
+}
+
+function fieldRow(label, value){
+  const row = document.createElement('div');
+  row.className = 'field-row';
+  row.innerHTML = `<div class="k">${label}</div><div class="v">${escapeHtml(value)}</div>`;
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = 'Αντιγραφή';
+  btn.addEventListener('click', ()=> copyToClipboard(value, btn));
+  row.appendChild(btn);
+  return row;
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderVault(data){
+  const fieldsList = document.getElementById('fields-list');
+  fieldsList.innerHTML = '';
+  const base = [];
+  if(data.afm) base.push(['ΑΦΜ', data.afm]);
+  if(data.amka) base.push(['ΑΜΚΑ', data.amka]);
+  (data.extra || []).forEach(f => { if(f.label && f.value) base.push([f.label, f.value]); });
+  if(base.length === 0){
+    fieldsList.innerHTML = '<div class="empty-hint">Δεν έχουν καταχωρηθεί στοιχεία.</div>';
+  }else{
+    base.forEach(([label, value]) => fieldsList.appendChild(fieldRow(label, value)));
+  }
+
+  const filesList = document.getElementById('files-list');
+  filesList.innerHTML = '';
+  const files = data.files || [];
+  if(files.length === 0){
+    filesList.innerHTML = '<div class="empty-hint">Δεν έχουν προστεθεί αρχεία.</div>';
+  }else{
+    files.forEach(f => {
+      const item = document.createElement('div');
+      item.className = 'file-item';
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = f.name || 'Αρχείο';
+      const link = document.createElement('a');
+      link.href = f.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = 'Άνοιγμα';
+      item.appendChild(name); item.appendChild(link);
+      filesList.appendChild(item);
+    });
+  }
+
+  const notesSection = document.getElementById('notes-section');
+  if(data.notes && data.notes.trim()){
+    document.getElementById('notes-box').textContent = data.notes;
+    notesSection.style.display = 'block';
+  }else{
+    notesSection.style.display = 'none';
+  }
+}
+</script>
+</body>
+</html>
